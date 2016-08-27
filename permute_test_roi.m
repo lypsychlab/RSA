@@ -1,14 +1,16 @@
-function permute_test_roi(rootdir,study,subnums,bmatrix,iter,roi,findtag)
+function permute_test_roi(rootdir,study,resdir,subnums,bmatrix,iter,roi,findtag)
 % performs permutation test for ROI RSA results
 % 
 % Parameters:
 % - rootdir: root directory
 % - study: study directory
+% - resdir: results directory 
 % - subnums: subject numbers (array)
 % - bmatrix: name of regressor to be scrambled
 % - iter: number of iterations
 % - roi: name of masked ROI to use
 % - findtag: identifier for categorical RSA results (i.e., the H0 model)
+% 
 
 	cd(fullfile(rootdir,study,'results'));
 	load(['all_regressinfo_' findtag '.mat'],'ALL');
@@ -37,8 +39,8 @@ function permute_test_roi(rootdir,study,subnums,bmatrix,iter,roi,findtag)
 
         for sub=subnums
             try
-		        searchlight_all_regress_roi_pleiades('/home/younglw/server/englewood/mnt/englewood/data',...
-		      'PSYCH-PHYS','SAX_DIS','DIS_results_itemwise_normed',sub,1:48,3,...
+		        searchlight_all_regress_roi_pleiades(rootdir,...
+		      study,'SAX_DIS',resdir,sub,1:48,3,...
 		      {'phys' 'psyc' 'inc' 'path' 'physVpsyc' 'incVpath' ['PERM_' num2str(it)]},roi,'_PERM');
 	    
 	        catch
@@ -47,7 +49,7 @@ function permute_test_roi(rootdir,study,subnums,bmatrix,iter,roi,findtag)
             end
         end %end subject loop
 
-        load_corrs_pleiades([roi '_PERM']); %aggregate the results across subjects
+        load_corrs(rootdir,study,resdir,[roi '_PERM'],0); %aggregate the results across subjects
         cd(fullfile(rootdir,study,'results'));
         load(['all_regressinfo_' roi '_PERM.mat'],'ALL'); %load up the aggregated results
         ALL_perm=ALL; clear ALL;
@@ -65,6 +67,6 @@ function permute_test_roi(rootdir,study,subnums,bmatrix,iter,roi,findtag)
         P=[P;p];
         RDIFF2=[RDIFF2 rdiff2];
     end %end iterations loop
-    save(['permute_test_' roi '.mat'],'H','P','RDIFF2');
+    save(['permute_test_' roi '_' bmatrix '.mat'],'H','P','RDIFF2');
 
 end %end function
