@@ -29,7 +29,7 @@ function searchlight_base_euclid(rootdir,study,subj_tag,resdir,sub_nums,cond_in,
 % - in corrs*.mat and spear*.mat, the LAST value represents the constant (intercept) regressor.
 % - paths will need to be changed if you are running this on anything other than Pleiades (BC Linux cluster)
 
-	addpath('/home/younglw/scripts/combinator')
+	addpath('/home/younglw/lab/scripts/combinator')
 	addpath(genpath('/usr/public/spm/spm12'));
 	subjIDs={};
 	for sub=1:length(sub_nums)
@@ -57,7 +57,7 @@ function searchlight_base_euclid(rootdir,study,subj_tag,resdir,sub_nums,cond_in,
     	disp(sprintf([B_in{thisb} '\n']));
     end
 
-	cd('/home/younglw/scripts/');
+	cd('/home/younglw/lab/scripts/');
 	load voxel_order2; 
     load greymattermask2;
 
