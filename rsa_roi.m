@@ -1,6 +1,6 @@
 function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,outtag)
 % rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,outtag):
-% - performs searchlight RSA within a given ROI, using 1 to n matrix regressors 
+% - performs RSA within a given ROI, using 1 to n matrix regressors 
 % to model the empirical neural similarities.
 % 
 % Parameters:
@@ -31,7 +31,7 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
 	for sub=1:length(sub_nums)
 		subjIDs{end+1}=sprintf([subj_tag '_' '%02d'],sub_nums(sub));
 	end
-	addpath('/home/younglw/scripts/combinator/');
+	addpath('/home/younglw/lab/scripts/combinator/');
 	addpath(genpath('/usr/public/spm/spm12'));
 
 
@@ -50,7 +50,7 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
 	%edge number = sph-1 or -(sph-1).
 
 
-	cd('/home/younglw/scripts/');
+	cd('/home/younglw/lab/scripts/');
 	%find_structure is a slightly more user-friendly way to load .mats 
 	%and will eventually be capable of searching multiple directories, for disorganized users
 	% find_structure(voxel_order,rootdir,study); % x y z coordinates of voxels in entire volume. stops 3 voxels from edge
@@ -62,6 +62,8 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
 
     % c1=conditions(1);c2=conditions(2);
     % conditions=c2-c1;
+    c1=conditions(1);
+	conditions=length(conditions);
 
 	for subj=1:length(subjIDs) %grabbing beta images
 
@@ -70,14 +72,14 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
 		B=[];
 		for b=1:length(B_in)
 			try
-				load(fullfile(rootdir, study, 'behavioural',['behav_matrix_' B_in{b} '.mat']));
-		        disp(fullfile(rootdir, study, 'behavioural',['behav_matrix_' B_in{b} '.mat']));
+				load(fullfile(rootdir, study, 'behavioural_all',['behav_matrix_' B_in{b} '.mat']));
+		        disp(fullfile(rootdir, study, 'behavioural_all',['behav_matrix_' B_in{b} '.mat']));
 		        behav_matrix=sim2tril(behav_matrix);
 				B=[B behav_matrix];
 				clear behav_matrix;
 			catch
-				load(fullfile(rootdir, study, 'behavioural',['behav_matrix_' subjIDs{subj} '_' B_in{b} '.mat']));
-		        disp(fullfile(rootdir, study, 'behavioural',['behav_matrix_' subjIDs{subj} '_' B_in{b} '.mat']));
+				load(fullfile(rootdir, study, 'behavioural_all',['behav_matrix_' subjIDs{subj} '_' B_in{b} '.mat']));
+		        disp(fullfile(rootdir, study, 'behavioural_all',['behav_matrix_' subjIDs{subj} '_' B_in{b} '.mat']));
 		        behav_matrix=sim2tril(behav_matrix);
 				B=[B behav_matrix];
 				clear behav_matrix;
@@ -89,8 +91,6 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
 		catch
 			continue
 		end
-	    c1=conditions(1);
-	    conditions=length(conditions);
 
 	    betadir = dir('beta_item*nii');betafiles=cell(conditions,1);
 	    for i=1:conditions
@@ -140,11 +140,12 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
         end
         clear Y;
         goodrows = find(isnan(spherebetas(:,1)) == 0);
-        simmat      = corrcoef(spherebetas(goodrows,:));% item similarities for this subject
+        simmat      = atanh(corrcoef(spherebetas(goodrows,:)));% item similarities for this subject
         temp        = tril(simmat,-1); % tril() gets lower triangle of matrix
         bigmat = temp(temp~=0)';% we now have a triangle x 1 matrix
 
         predictors = horzcat(ones(size(B,1),1),B);
+        % keyboard
 	    [weights,bint,Rval,Rint,Stats] = regress(bigmat',predictors);
 	    weights=weights';
 
