@@ -8,5 +8,6 @@ rsa_roi.m - RSA script for voxels inside a masked ROI<br />
 searchlight_onesamp.m - aggregate RSA images across subjects <br />
 permute_test_roi.m - run within-ROI RSA, using permuted matrices <br />
 load_corrs.m - aggregate data from within-ROI RSA <br />
+orthogonalize_reg: orthogonalizes regressors in a matrix w/r/t one another<br />
 behavioral_PCA.R - run principal components analysis/K-means on behavioral data <br />
 
