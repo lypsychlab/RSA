@@ -1,4 +1,4 @@
-function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,outtag)
+function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,orth_flag,outtag)
 % rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,outtag):
 % - performs RSA within a given ROI, using 1 to n matrix regressors 
 % to model the empirical neural similarities.
@@ -144,7 +144,11 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
         temp        = tril(simmat,-1); % tril() gets lower triangle of matrix
         bigmat = temp(temp~=0)';% we now have a triangle x 1 matrix
 
-        predictors = horzcat(ones(size(B,1),1),B);
+        if orth_flag == 1
+        	predictors = horzcat(ones(size(B,1),1),orthogonalize_reg(B));
+        else
+        	predictors = horzcat(ones(size(B,1),1),B);
+        end
         % keyboard
 	    [weights,bint,Rval,Rint,Stats] = regress(bigmat',predictors);
 	    weights=weights';
