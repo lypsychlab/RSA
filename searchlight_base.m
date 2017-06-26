@@ -1,5 +1,5 @@
 function searchlight_base(rootdir,study,subj_tag,resdir,sub_nums,cond_in,sph,B_in,outtag)
-% searchlight_all_regress(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,outtag):
+% searchlight_base(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,outtag):
 % - performs searchlight RSA, using 1 to n matrix regressors to model the empirical neural similarities.
 % 
 % Parameters:
@@ -28,7 +28,7 @@ function searchlight_base(rootdir,study,subj_tag,resdir,sub_nums,cond_in,sph,B_i
 % - in corrs*.mat and spear*.mat, the LAST value represents the constant (intercept) regressor.
 % - paths will need to be changed if you are running this on anything other than Pleiades (BC Linux cluster)
 
-	addpath('/home/younglw/lab/scripts/combinator')
+	addpath('./combinator')
 	addpath(genpath('/usr/public/spm/spm12'));
 	subjIDs={};
 	for sub=1:length(sub_nums)
@@ -98,7 +98,8 @@ function searchlight_base(rootdir,study,subj_tag,resdir,sub_nums,cond_in,sph,B_i
 	    disp(['Processing correlations...'])
 	    triangle = ((conditions^2)/2)-(conditions/2);
 	    bigmat = zeros(length(greymattermask2),triangle);
-	    corrs  = zeros(length(greymattermask2),(size(B,2)+1)); 
+	    corrs  = zeros(length(greymattermask2),(size(B,2)+1));
+	    r_stats = zeros(length(greymattermask2),1);
 	    spear=[];
 	    for i = 1:length(greymattermask2)% for each voxel
 	        sphere      = repmat(voxel_order2(greymattermask2(i),:),length(coords),1) + coords; 
@@ -119,11 +120,10 @@ function searchlight_base(rootdir,study,subj_tag,resdir,sub_nums,cond_in,sph,B_i
 	            size(bigmat(i,:))
 	            bigmat(i,:) = temp(temp~=0)';% we now have a triangle x 1 matrix
 
-	            % temp        = corrcoef( behav_matrix , bigmat(i,:)' ); %correlation with behavioral matrix
 	            predictors = horzcat(ones(size(B,1),1),B);
-	            weights = regress(bigmat(i,:)',predictors);
+	            [weights,regbint,regres,regint,regstats] = regress(bigmat(i,:)',predictors);
 	            weights=weights';
-
+	            r_stats(i) = regstats(1);
 	            corrs(i,:)=[weights(2:end) weights(1)]; %put the intercept at the end
 
 	            thisspear = corr([bigmat(i,:)' predictors],'type','Spearman');
@@ -142,9 +142,9 @@ function searchlight_base(rootdir,study,subj_tag,resdir,sub_nums,cond_in,sph,B_i
 	    disp('Correlations saved.');
 
 	    for b=1:(length(B_in)+1)
-		    corrmap(b).map  = zeros(size(Y(:,:,:,1))); 
+		    corrmap(b).map  = zeros(size(Y(:,:,:,1)));    
 	   	end
-
+	   	Rmap = zeros(size(Y(:,:,:,1)));
         for b=1:(length(B_in)+1) %for each regressor
 
 		    for i=1:length(greymattermask2)  %for each voxel
@@ -154,6 +154,11 @@ function searchlight_base(rootdir,study,subj_tag,resdir,sub_nums,cond_in,sph,B_i
 	                    voxel_order2(greymattermask2(i),3)) = corrs(i,b); %write the value to that voxel
 		    end
 		end
+		for i=1:length(greymattermask2)  %for each voxel
+            Rmap(voxel_order2(greymattermask2(i),1),...
+                    voxel_order2(greymattermask2(i),2),...
+                    voxel_order2(greymattermask2(i),3)) = r_stats(i); %write the value to that voxel
+	    end
 	    disp('Creating template...');
 
 	    template_dir=dir('beta_*nii');
@@ -164,7 +169,7 @@ function searchlight_base(rootdir,study,subj_tag,resdir,sub_nums,cond_in,sph,B_i
 		    spm_write_vol(template,corrmap(b).map);
 		end
 		template.fname = ['RSA_searchlight_regress_const_' outtag '.img']; spm_write_vol(template,corrmap(length(B_in)+1).map);
-
+		template.fname = ['RSA_searchlight_regress_Rmap_' outtag '.img']; spm_write_vol(template,Rmap);
 	    % clear corrs meantril corrmap template spear
 	    disp(['Subject ' subjIDs{subj} ' complete.'])
 	    toc 

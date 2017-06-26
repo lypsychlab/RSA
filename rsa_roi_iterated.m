@@ -1,7 +1,8 @@
-function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,orth_flag,outtag)
-% rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,outtag):
+function rsa_roi_iterated(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,orth_flag,iterations,outtag)
+% rsa_roi_iterated(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roiname,outtag):
 % - performs RSA within a given ROI, using 1 to n matrix regressors 
 % to model the empirical neural similarities.
+% - iterates regression to test for parameter estimate instability (potentially due to collinearity) 
 % 
 % Parameters:
 % - rootdir:
@@ -16,7 +17,8 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
 % The nth matrix must be in the format "behav_matrix_*.mat" where * is B_in{n}
 % and must be stored in a variable within that .mat named behav_matrix
 % - roiname: name of ROI (string). E.g. 'RTPJ'
-% - orth_flag: vector of orthogonalization flags
+% - orth_flag: flag for orthogonalization (1)
+% - iterations: number of iterations to perform
 % - outtag: string to label this analysis. Must start with '_'
 %
 % Output:
@@ -52,9 +54,10 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
 
 
 	cd('/home/younglw/lab/scripts/');
-	
+
 	load voxel_order2;
     load greymattermask2;
+
 
     c1=conditions(1);
 	conditions=length(conditions);
@@ -75,11 +78,12 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
 				B=[B behav_matrix];
 				clear behav_matrix;
 			end
-			if orth_flag(b) == 1
-				ortho_reg = load(fullfile(rootdir,study,'behavioural_all',['behav_matrix_' B_in{b} '_ortho.mat']));
-				B(:,b) = ortho_reg.behav_matrix; 
-				clear ortho_reg;
-			end
+		end
+
+		if orth_flag == 2 % last regressor should be orthogonalized version
+			ortho_reg = load(fullfile(rootdir,study,'behavioural_all',['behav_matrix_' B_in{end} '_ortho.mat']));
+			B(:,end) = ortho_reg.behav_matrix; 
+			clear ortho_reg;
 		end
 
 		try
@@ -140,27 +144,32 @@ function rsa_roi(rootdir,study,subj_tag,resdir,sub_nums,conditions,sph,B_in,roin
         temp        = tril(simmat,-1); % tril() gets lower triangle of matrix
         bigmat = temp(temp~=0)';% we now have a triangle x 1 matrix
 
-        
-    	predictors = horzcat(ones(size(B,1),1),B);
-	    [weights,bint,Rval,Rint,Stats] = regress(bigmat',predictors);
-	    weights=weights';
+        if orth_flag == 1
+        	disp(['Orthogonalizing regressors.'])
+        	predictors = horzcat(ones(size(B,1),1),orthogonalize_reg(B));
+        else
+        	predictors = horzcat(ones(size(B,1),1),B);
+        end
+        iter_struct = struct([]);
+        for iter = 1:iterations
+        	disp(['Iteration ' num2str(iter)]);
+		    [weights,bint,Rval,Rint,Stats] = regress(bigmat',predictors);
+		    weights=weights';
 
-	    corrs=[weights(2:end) weights(1)];
+		    corrs=[weights(2:end) weights(1)];
 
-	    thisspear = corr([bigmat' predictors],'type','Spearman');
-	    thisspear=thisspear(1,:); %only grab correlations of empirical data with predictors
-	    thisspear=[thisspear(2:end) thisspear(1)];
-	    spear=thisspear;
+		    clear weights;
 
-	    clear temp simmat behav_1 behav_2 weights predictors thisspear
- 	    save(['bigmat_' roiname outtag '.mat'], 'bigmat');
-	    save(['corrs_' roiname outtag '.mat'], 'corrs');
-	    save(['spearman_' roiname outtag '.mat'], 'spear');
-		
-	   	save(['regressinfo_' roiname outtag '.mat'], 'corrs','bint','Rval','Rint','Stats');
+		    iter_struct(iter).corrs = corrs;
+		    iter_struct(iter).bint = bint;
+		    iter_struct(iter).Rval = Rval;
+		    iter_struct(iter).Rint = Rint;
+		    iter_struct(iter).Stats = Stats;
+		    clear corrs bint Rval Stats Rint;
+		end
+	   	save(['regressinfo_' roiname outtag '_iterated.mat'], 'iter_struct');
 
 	    disp('Correlations saved.');
-	    clear corrs meantril spear bint Rval Rint Stats;
 	    disp(['Subject ' subjIDs{subj} ' complete.'])
 	    toc
 	end % subject list
