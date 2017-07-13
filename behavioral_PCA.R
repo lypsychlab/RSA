@@ -3,7 +3,7 @@
 # make some nice biplots of PCA data, using ggplot/ggbiplot ((c) Vince Q. Vu, https://github.com/vqv/ggbiplot)
 # run K-means clustering analysis on PCA data
 
-setwd('~/Documents/data_analysis/dis_rsa/behavioral_variables')
+setwd('~/Documents/projects/dis_rsa/behavioral_variables')
 # change this when running on a different system
 source('~/Documents/code/R/ggbiplot.R')
 source('~/Documents/code/R/ggscreeplot.R')
@@ -12,16 +12,12 @@ library('ggplot2')
 
 d=read.csv('behavioral_vars.csv') #csv file of behavioral variables (1 measurement/item)
 
-colnames(d)[1]='acc_wrongness'
-colnames(d)[2]='int_wrongness'
+colnames(d)[1:12]=c('WR (Acc)','WR (Int)','DIS','HTO','HTS','PA','SA','WRD','RAT','ENV','BEH','MIND')
+colnames(d)[1:12]=c('Acc. Wrongness','Int. Wrongness','Disgust','Harm (Others)','Harm (Self)','Person Attr.','Sit. Attr.','Weirdness','Rationality','Att. to Env.','Att. to Beh.','Att. to Minds')
 
 pc=prcomp(d,scale.=TRUE,center=TRUE)
 
-# make a crappy plot:
-ggbiplot(pc)
-
 # make a pretty plot with groups indicated:
-colnames(d)[1:12]=c('WR (Acc)','WR (Int)','DIS','HTO','HTS','PA','SA','WRD','RAT','ENV','BEH','MIND')
 vec=rep(1:4,12)
 d$cond=as.factor(vec[order(vec)])
 levels(d$cond)=c('Physical Harm','Psychological Harm','Incest','Purity')
